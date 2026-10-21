@@ -1,6 +1,9 @@
 #ifndef OXTORG_LUA_HOST_H
 #define OXTORG_LUA_HOST_H
 #include <lua.h>
+#if LUA_VERSION_NUM != 505
+#error "EmberBSD-Spark requires the common Lua 5.5 ABI"
+#endif
 int host_http(lua_State *L);
 void host_http_close(void);
 int luaopen_asenta_fs(lua_State *L);

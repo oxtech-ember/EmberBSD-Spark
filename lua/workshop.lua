@@ -108,7 +108,7 @@ local function loadSpec(name, read)
 end
 
 local bootstrap = [=[
-assert(_VERSION == "Lua 5.4", "Lua 5.4 is required")
+assert(_VERSION == "Lua 5.5", "Lua 5.5 is required")
 local codec = require("dkjson")
 local requestText = assert(io.read("*l"), "missing Lua request")
 local request, _, why = codec.decode(requestText, 1, codec.null)

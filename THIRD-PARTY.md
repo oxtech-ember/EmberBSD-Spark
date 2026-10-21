@@ -4,7 +4,7 @@ The host bundle builder downloads these pinned sources and checks their SHA-256 
 
 | Component | License | Use |
 | --- | --- | --- |
-| [Lua 5.4.8](https://www.lua.org/license.html) | MIT | Statically linked in the host bundle |
+| [Lua 5.5.1](https://www.lua.org/license.html) | MIT | Statically linked in the host bundle |
 | [dkjson 2.11](https://dkolf.de/dkjson-lua/) | MIT | Included in the Lua application |
 | [curl](https://curl.se/docs/copyright.html) | curl license | Provided by the selected host or target dependency set |
 

@@ -5,7 +5,7 @@ Use the common GCC16 compiler from [Ports](https://github.com/oxtech-ember/Ember
 Use the matching [SDK sysroot](https://github.com/oxtech-ember/EmberBSD-SDK/blob/main/docs/sysroot.md).
 
 The sysroot must contain EmberBSD headers, CRT, libc, libprop, libbluetooth,
-and the common Lua 5.4 and libcurl dependencies.
+and the common Lua 5.5 and libcurl dependencies.
 Keep the compiler, ABI, runtime, and dependency set consistent.
 Do not substitute upstream NetBSD components.
 
@@ -31,10 +31,10 @@ It does not execute target programs.
 
 ## Package source modules
 
-Use the host's Lua 5.4 interpreter and the selected dkjson source:
+Use the host's Lua 5.5 interpreter and the selected dkjson source:
 
 ```sh
-lua5.4 package.lua /path/to/dkjson.lua spark-development \
+lua5.5 package.lua /path/to/dkjson.lua spark-development \
   build/emberbsd-aarch64/oxtorg-agent.lua lua/*.lua
 cp build/emberbsd-aarch64/agent-lua build/emberbsd-aarch64/oxtorg-agent
 ```

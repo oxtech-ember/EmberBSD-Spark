@@ -13,7 +13,8 @@ Preserve existing protocol identifiers and explain interface changes.
 Keep C system modules separate from Lua application logic.
 Do not add a required Go or Python process on the device.
 
-Use the shared GCC16 compiler and current Ports dependencies for EmberBSD targets.
+Use the shared GCC16 compiler and common Lua 5.5/Ports dependencies for EmberBSD targets.
+Do not add an older dependency version for one consumer.
 Keep the target compiler, ABI, sysroot, and dependency provenance consistent.
 Build on the development host. Use devices and VMs for execution checks.
 Dependency and OS fixes belong in their owning repositories.

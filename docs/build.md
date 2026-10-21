@@ -1,6 +1,6 @@
 # Build
 
-Spark uses C99, Lua 5.4, libcurl 7.85 or newer, pthread, and dkjson.
+Spark uses C99, Lua 5.5, libcurl 7.85 or newer, pthread, and dkjson.
 NetBSD supplies SHA-256 through libc. macOS uses CommonCrypto.
 Linux and FreeBSD use libcrypto.
 NetBSD also supplies libprop and libbluetooth.
@@ -11,10 +11,12 @@ A host build does not qualify an EmberBSD package.
 
 ## Host build
 
-On a Debian-family development host, install the development packages:
+Install Lua 5.5 headers and libraries, libcurl with TLS, and dkjson.
+Linux and FreeBSD also need libcrypto headers and libraries.
+Use GNU Make 4+ or BSD make. macOS system make 3.81 is too old.
+Select `gmake` on a host where `make` is an older implementation.
 
 ```sh
-sudo apt-get install build-essential pkg-config liblua5.4-dev lua-dkjson libcurl4-openssl-dev libssl-dev
 make
 ./build/agent-lua examples/hello.lua
 ```
@@ -37,12 +39,13 @@ export LUA_PATH='/path/to/modules/?.lua;;'
 
 ## Portable host bundle
 
-The existing bundle builder uses Lua 5.4.8 and dkjson 2.11.
-These pins preserve the current application ABI and package format.
+The bundle builder uses Lua 5.5.1 and dkjson 2.11.
+It uses the same Lua minor version as the common EmberBSD dependency.
+Rebuild native Lua modules for this ABI; do not load Lua 5.4 modules.
 The script verifies both downloads by SHA-256.
 
 ```sh
-./build.sh --output-dir "$PWD/build/package" --version spark-development
+MAKE=make ./build.sh --output-dir "$PWD/build/package" --version spark-development
 ./build/package/oxtorg-agent -capabilities
 ```
 

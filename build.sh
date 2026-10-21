@@ -16,7 +16,7 @@ while [ "$#" -gt 0 ]; do
         --help|-h)
             echo 'Usage: build.sh [--output-dir DIR] [--version VERSION] [--inputs DIR]'
             echo 'Native build; CC, CFLAGS, CURL_CFLAGS/CURL_LIBS, CRYPTO_CFLAGS/CRYPTO_LIBS and MAKE may be overridden.'
-            echo 'Lua 5.4.8 and dkjson 2.11 are downloaded if missing, then checked by SHA256.'
+            echo 'Lua 5.5.1 and dkjson 2.11 are downloaded if missing, then checked by SHA256.'
             echo 'The destination OS must provide the dynamic libraries listed in runtime-dependencies.txt.'
             exit 0;;
         *) echo "Unknown argument: $1" >&2; exit 2;;
@@ -44,12 +44,12 @@ fetch() {
     fi
     [ "$(hash_file "$inputs/$name")" = "$expected" ] || { echo "Checksum differs: $name" >&2; exit 1; }
 }
-fetch lua-5.4.8.tar.gz https://www.lua.org/ftp/lua-5.4.8.tar.gz 4f18ddae154e793e46eeab727c59ef1c0c0c2b744e7b94219710d76f530629ae
+fetch lua-5.5.1.tar.gz https://www.lua.org/ftp/lua-5.5.1.tar.gz 1c4b4068d67061f2a2231ad2b5422e77acea1487ea9890f6320af614f4373dce
 fetch dkjson-2.11.lua https://dkolf.de/dkjson-lua/dkjson-2.11.lua 197cb50834c642f84b4cf99fe724932c50e6d9c92faec7ad89aa25e91df4d481
-tar -xzf "$inputs/lua-5.4.8.tar.gz" -C "$stage"
+tar -xzf "$inputs/lua-5.5.1.tar.gz" -C "$stage"
 make_command=${MAKE:-make}
 compiler=${CC:-cc}
-"$make_command" -C "$stage/lua-5.4.8/src" -j "${OXTORG_BUILD_JOBS:-3}" a \
+"$make_command" -C "$stage/lua-5.5.1/src" -j "${OXTORG_BUILD_JOBS:-3}" a \
     CC="$compiler" CFLAGS="${CFLAGS:--Os -std=c99} -DLUA_USE_POSIX -DLUA_USE_DLOPEN"
 pkg_config=${PKG_CONFIG:-pkg-config}
 if [ "$system" = Darwin ]; then
@@ -74,7 +74,7 @@ esac
 "$make_command" -C "$source_dir" "BUILD_DIR=$stage/host" \
     "CC=$compiler" "PKG_CONFIG=$pkg_config" \
     "CFLAGS=${CFLAGS:--Os -std=c99 -Wall -Wextra -Werror}" "CPPFLAGS=${CPPFLAGS:-}" "LDFLAGS=${LDFLAGS:-}" \
-    "LUA_CFLAGS=-I$stage/lua-5.4.8/src" "LUA_LIBS=$stage/lua-5.4.8/src/liblua.a $module_flags" \
+    "LUA_CFLAGS=-I$stage/lua-5.5.1/src" "LUA_LIBS=$stage/lua-5.5.1/src/liblua.a $module_flags" \
     "CRYPTO_CFLAGS=$crypto_cflags" "CRYPTO_LIBS=$crypto_libs" \
     "CURL_CFLAGS=$curl_cflags" "CURL_LIBS=$curl_libs" "$stage/host/agent-lua"
 "$stage/host/agent-lua" "$source_dir/package.lua" "$inputs/dkjson-2.11.lua" \
@@ -82,12 +82,12 @@ esac
 cp "$stage/host/agent-lua" "$stage/oxtorg-agent"
 printf '%s\n' "$version" >"$stage/BUILD"
 {
-    printf 'runtime=C99 + Lua 5.4.8\ndkjson=2.11\nsystem=%s\narchitecture=%s\n' "$system" "$(uname -m)"
+    printf 'runtime=C99 + Lua 5.5.1\ndkjson=2.11\nsystem=%s\narchitecture=%s\n' "$system" "$(uname -m)"
     printf '%s\n' 'Lua and dkjson are included. The following libraries and their TLS trust store are provided by the destination OS.'
     if [ "$system" = Darwin ]; then otool -L "$stage/oxtorg-agent" | sed '1d'
     else ldd "$stage/oxtorg-agent" | sed '1{/^[^[:space:]]/d;}; s/ (0x[0-9a-fA-F]*)//g'; fi
     printf '\nLua license:\n'
-    sed -n '/^\* Copyright/,/^\*\*\*\*/p' "$stage/lua-5.4.8/src/lua.h"
+    sed -n '/^\* Copyright/,/^\*\*\*\*/p' "$stage/lua-5.5.1/src/lua.h"
     printf '\ndkjson license is preserved in oxtorg-agent.lua.\n'
     printf '\nEmberBSD-Spark license:\n'
     cat "$source_dir/LICENSE"
