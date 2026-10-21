@@ -238,3 +238,79 @@ check(not ok and reply.reason == "model_refused" and #posts == 2 and posts[1] ==
 		t.Fatalf("xAI refusal fixture failed: %v\n%s", err, output)
 	}
 }
+
+func TestGrokSafetyIdentifierHashesDeviceId(t *testing.T) {
+	const device = "device-serial-9f3a"
+	directory := t.TempDir()
+	script := `
+package.path = arg[1] .. "/?.lua;" .. package.path
+local json, Model = require("json"), require("model")
+local fs = require("asenta.fs")
+
+local function check(condition, text)
+    if not condition then error(text, 0) end
+end
+
+local device = arg[2]
+check(os.getenv("EMBER_DEVICE_ID") == device, "device id fixture is missing")
+local expected = fs.sha256(device)
+check(#expected == 64 and expected ~= device, "hash fixture")
+
+local catalogue = {object="list", data={{id="grok-4.7", object="model", owned_by="xai", context_length=500000}}}
+local body = {status="completed", output={{type="message", status="completed",
+    content={{type="output_text", text="Visible answer."}}}},
+    usage={input_tokens=4, output_tokens=2, total_tokens=6, cost_in_usd_ticks=10000}}
+
+local function clientFor(capture)
+    local posts = {}
+    local client = {}
+    function client:request(method, path, request, model)
+        check(model, "model endpoint was not selected")
+        if method == "GET" then return catalogue, 200 end
+        posts[#posts + 1] = request
+        if capture then capture(request) end
+        return body, 200
+    end
+    return client, posts
+end
+
+local plainClient, plainPosts = clientFor()
+local plain = Model.new({model={alias="grok-4.7"}}, plainClient)
+local reply = plain:request(json.array({{role="user", content="Read"}}), json.array(), nil)
+check(reply.answer == "Visible answer." and plainPosts[1].safety_identifier == nil,
+    "safety_identifier was sent without safetyIdEnv")
+
+local seen
+local hashedClient, hashedPosts = clientFor(function(request) seen = request end)
+local hashed = Model.new({model={alias="grok-4.7", safetyIdEnv="EMBER_DEVICE_ID"}}, hashedClient)
+reply = hashed:request(json.array({{role="user", content="Read"}}), json.array(), nil)
+check(#hashedPosts == 1 and seen.safety_identifier == expected, "safety_identifier is not the device hash")
+check(not json.encode(seen):find(device, 1, true), "raw device id was sent")
+
+local missingClient, missingPosts = clientFor()
+local missing = Model.new({model={alias="grok-4.7", safetyIdEnv="MISSING_DEVICE_ID"}}, missingClient)
+local ok, err = pcall(missing.request, missing, json.array({{role="user", content="Read"}}), json.array(), nil)
+check(not ok and type(err) == "table" and err.message:find("MISSING_DEVICE_ID", 1, true)
+    and not err.message:find(device, 1, true), "missing device id was not reported safely")
+check(#missingPosts == 0, "a missing device id still called the model")
+`
+	file := filepath.Join(directory, "grok-safety.lua")
+	if err := os.WriteFile(file, []byte(script), 0600); err != nil {
+		t.Fatal(err)
+	}
+	binary, err := filepath.Abs("../build/agent-lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	modules, err := filepath.Abs("../lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, binary, file, modules, device)
+	command.Env = append(os.Environ(), "LUA_PATH=/usr/local/share/lua/5.5/?.lua;;", "EMBER_DEVICE_ID="+device)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("xAI safety identifier fixture failed: %v\n%s", err, output)
+	}
+}

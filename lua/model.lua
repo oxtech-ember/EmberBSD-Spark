@@ -288,6 +288,16 @@ local function affordable(text, asked)
     if room >= 1024 and (not asked or room < asked) then return room end
 end
 
+-- safety_identifier is optional. Send the SHA-256 hex digest of the configured
+-- device id. Never send the raw id. Omit the field when safetyIdEnv is unset.
+local function safetyIdentifier(config)
+    local name = config.safetyIdEnv
+    if not nonempty(name) then return nil end
+    local raw = os.getenv(name)
+    if not nonempty(raw) then reject("model_config", "missing device id variable: " .. name) end
+    return require("asenta.fs").sha256(raw)
+end
+
 function Model:request(input, definitions, task)
     local primary = task and nonempty(task.seat) and task.seat or self.config.alias
     local seat = self:open(primary)
@@ -303,7 +313,8 @@ function Model:request(input, definitions, task)
             reject("model_api_unsupported", "This adapter supports Responses, not " .. at.api)
         end
         local request = {model=at.alias, input=input, tools=#tools > 0 and tools or nil,
-            store=false, max_output_tokens=reserve(at, self.config.maxAnswer)}
+            store=false, max_output_tokens=reserve(at, self.config.maxAnswer),
+            safety_identifier=safetyIdentifier(self.config)}
         local ok, response, status = pcall(self.client.request, self.client, "POST", "/v1/responses", request, true)
         if not ok and gatewayError(response) then
             local room = affordable(message(response), request.max_output_tokens)
