@@ -90,3 +90,14 @@ These checks do not qualify an EmberBSD binary.
 The available target sysroot contains Lua 5.4.6; the GCC16 dependency check rejects ABI 504.
 Build with the common Lua 5.5 sysroot before target tests. Do not add a legacy Lua fallback.
 Device I/O, a real model service, and a long-run installation require separate acceptance.
+
+Reproduce the focused memory check with the selected GCC and Lua dependency:
+
+```sh
+make CC=gcc BUILD_DIR=build/asan \
+  CFLAGS='-O1 -g -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer' \
+  LDFLAGS='-fsanitize=address,undefined' all
+ASAN_OPTIONS=halt_on_error=1:detect_leaks=1 \
+UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
+  build/asan/agent-lua tests/testdata/allocator.lua
+```
