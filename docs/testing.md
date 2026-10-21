@@ -86,10 +86,13 @@ The check uses `-fsanitize=address,undefined`, `halt_on_error=1`, and `detect_le
 It reports no memory error, but macOS dyld module-map warnings limit sanitizer backtraces.
 The system Lua library is not instrumented. This is not a Valgrind run or a complete leak qualification.
 
-These checks do not qualify an EmberBSD binary.
-The available target sysroot contains Lua 5.4.6; the GCC16 dependency check rejects ABI 504.
-Build with the common Lua 5.5 sysroot before target tests. Do not add a legacy Lua fallback.
-Device I/O, a real model service, and a long-run installation require separate acceptance.
+The GCC16 AArch64 build links the common Lua 5.5 ABI 7. The application and
+Lua 5.5.1 interpreter started on an EmberBSD 11/AArch64 board. The local HTTPS
+fixtures, MCP and workshop checks passed there. A first suite run had 44 passing
+top-level tests, four optional skips and two fixture-transfer failures. Both
+failed fixtures passed after the missing files and interpreter path were added.
+These are separate runs, not a single clean full-suite run. Device I/O, a real
+model service and a long-run installation remain separate acceptance gates.
 
 Reproduce the focused memory check with the selected GCC and Lua dependency:
 

@@ -9,25 +9,25 @@ and the common Lua 5.5 and libcurl dependencies.
 Keep the compiler, ABI, runtime, and dependency set consistent.
 Do not substitute upstream NetBSD components.
 
-## Compile
+## Build and package
 
-Select the actual target compiler and package metadata.
-The paths below are placeholders for your prepared SDK:
+Set the target sysroot and GCC16 compiler. Provide the unmodified dkjson 2.11
+source file. The script verifies its SHA-256 before packaging it. The common
+Lua 5.5 must already be installed in the sysroot as `liblua.so.7`.
 
 ```sh
 export SPARK_SYSROOT=/path/to/prebuild-sdk-aarch64/sysroot
-export PKG_CONFIG_SYSROOT_DIR="$SPARK_SYSROOT"
-export PKG_CONFIG_LIBDIR="$SPARK_SYSROOT/usr/pkg/lib/pkgconfig:$SPARK_SYSROOT/usr/lib/pkgconfig"
-make TARGET_OS=NetBSD BUILD_DIR=build/emberbsd-aarch64 \
-  CC=/path/to/toolchain/bin/aarch64--netbsd-gcc \
-  CPPFLAGS="--sysroot=$SPARK_SYSROOT" \
-  LDFLAGS="--sysroot=$SPARK_SYSROOT -Wl,-E"
+export SPARK_CC=/path/to/toolchain/bin/aarch64--netbsd-gcc
+export SPARK_DKJSON=/path/to/dkjson-2.11.lua
+scripts/build-emberbsd.sh
 ```
 
-Set `LUA_PACKAGE` if the target uses another pkg-config name.
-You can also set `LUA_CFLAGS`, `LUA_LIBS`, `CURL_CFLAGS`, and `CURL_LIBS` explicitly.
-The build uses the target OS for system library selection.
-It does not execute target programs.
+The output is `build/emberbsd-aarch64/`. Set `SPARK_BUILD_DIR` for another
+absolute output directory. Set `SPARK_MAKE` if GNU Make has another name.
+The host needs a Lua 5.5 interpreter for source packaging; set
+`SPARK_HOST_LUA` if it has another name. No target executable runs on the host.
+The target links to the common system Lua. The package contains the Spark
+executable and its Lua source modules; it does not contain a second Lua runtime.
 
 ## Package source modules
 
@@ -46,4 +46,5 @@ Keep dependency licenses with a distributed package.
 Record the source revision, compiler, sysroot provenance, flags, and output hashes.
 Inspect the ELF architecture with the toolchain's `readelf`.
 Compilation, target execution, and physical-device acceptance are separate results.
-This extraction does not claim a newly verified board build.
+The GCC16 AArch64 build and a board launch passed with the common Lua 5.5 ABI.
+See [target checks](testing.md#target-checks) for the fixture boundary.

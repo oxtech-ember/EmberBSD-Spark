@@ -54,7 +54,9 @@ make
 This local example needs no server or credentials.
 See [build instructions](docs/build.md) for host packages and the portable bundle.
 For an EmberBSD target, use the shared GCC16 compiler and SDK/Ports dependencies.
-See [cross builds](docs/cross-build.md). Do not build development tools on the device.
+See [cross builds](docs/cross-build.md). The GCC16 AArch64 build and an
+EmberBSD 11 board launch have passed with the common Lua 5.5 ABI.
+Do not build development tools on the device.
 
 ## Documentation
 
