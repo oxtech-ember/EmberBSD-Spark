@@ -32,6 +32,9 @@ fi
 
 export PKG_CONFIG_SYSROOT_DIR="$SPARK_SYSROOT"
 export PKG_CONFIG_LIBDIR="$SPARK_SYSROOT/usr/pkg/lib/pkgconfig:$SPARK_SYSROOT/usr/lib/pkgconfig"
+# Compiler, sysroot, and pkg-config inputs are not Makefile prerequisites.
+# Rebuild the target binaries on every invocation to avoid stale packages.
+rm -f "$build_dir/agent-lua" "$build_dir/bluetooth-admin"
 "$make_command" -C "$source_dir" TARGET_OS=NetBSD BUILD_DIR="$build_dir" \
     LUA_PACKAGE=lua CC="$SPARK_CC" \
     CPPFLAGS="--sysroot=$SPARK_SYSROOT" \
@@ -44,7 +47,8 @@ cp "$source_dir/THIRD-PARTY.md" "$build_dir/THIRD-PARTY.md"
 readelf=${SPARK_READELF:-"${SPARK_CC%-gcc}-readelf"}
 {
     printf 'Spark version: %s\nLua ABI: 5.5 (liblua.so.7)\ndkjson: 2.11\n' "$version"
-    "$readelf" -d "$build_dir/oxtorg-agent" | awk '/\(NEEDED\)/ { print $NF }'
 } > "$build_dir/runtime-dependencies.txt"
+"$readelf" -d "$build_dir/oxtorg-agent" > "$build_dir/runtime-elf.txt"
+awk '/\(NEEDED\)/ { print $NF }' "$build_dir/runtime-elf.txt" >> "$build_dir/runtime-dependencies.txt"
 printf '%s\n' "$version" > "$build_dir/BUILD"
 printf 'EmberBSD Spark package: %s\n' "$build_dir"
