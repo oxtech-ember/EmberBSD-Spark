@@ -1,6 +1,8 @@
 -- Responses and token accounting follow the Asenta gateway protocol.
 -- The client owns endpoints and credentials. No paid request is replayed after
 -- a transport failure; only a known model refusal may select the spare alias.
+-- xAI reports usage.cost_in_usd_ticks (1e10 ticks per USD) or
+-- usage.cost_in_nano_usd. Those values replace catalogue estimates.
 local json = require("json")
 local Model = {}
 Model.__index = Model
@@ -10,6 +12,11 @@ local function object(value)
 end
 local function number(value) return tonumber(value) or 0 end
 local function nonempty(value) return type(value) == "string" and value ~= "" end
+local function whole(value)
+    if value == nil or value == json.null or type(value) ~= "number" then return nil end
+    if value < 0 or value >= math.huge or value ~= value or value % 1 ~= 0 then return nil end
+    return value
+end
 local function copy(value)
     local result = {}
     for key, item in pairs(value) do result[key] = item end
@@ -52,8 +59,36 @@ local function seatOf(raw)
             end
         end
     end
+    -- xAI GET /v1/models prices are USD cents per 100 million tokens.
+    -- A missing price, or an image pricing array, does not reject the model.
+    local provider
+    if raw.owned_by == "xai" then provider = "xai" end
+    if price.input == 0 and price.output == 0 and price.cached == 0 and #price.tiers == 0 then
+        local function perMillion(cents)
+            local value = whole(cents)
+            if value == nil then return nil end
+            return value / 10000
+        end
+        local input, output, cached = perMillion(raw.prompt_text_token_price),
+            perMillion(raw.completion_text_token_price), perMillion(raw.cached_prompt_text_token_price)
+        if input or output or cached then
+            provider = "xai"
+            price.input, price.output, price.cached = input or 0, output or 0, cached or 0
+            price.currency = price.currency or "USD"
+            local threshold = whole(raw.long_context_threshold)
+            local longIn, longOut = perMillion(raw.prompt_text_token_price_long_context),
+                perMillion(raw.completion_text_token_price_long_context)
+            local longCached = perMillion(raw.cached_prompt_text_token_price_long_context)
+            if threshold and threshold > 0 and ((longIn and longIn > 0) or (longOut and longOut > 0) or (longCached and longCached > 0)) then
+                price.tiers[#price.tiers + 1] = {upto=threshold - 1, input=price.input, output=price.output, cached=price.cached}
+                if longIn and longIn > 0 then price.input = longIn end
+                if longOut and longOut > 0 then price.output = longOut end
+                if longCached and longCached > 0 then price.cached = longCached end
+            end
+        end
+    end
     return {alias=raw.id, model=nonempty(meta.display_name) and meta.display_name or (nonempty(raw.name) and raw.name or raw.id),
-        price=price, contextWindow=window, maxOutput=maximum,
+        price=price, contextWindow=window, maxOutput=maximum, provider=provider,
         api=nonempty(meta.api) and meta.api or (nonempty(raw.api) and raw.api or "responses")}
 end
 
@@ -75,10 +110,14 @@ function Model.accounting(response, seat)
     local cached = math.max(0, math.min(input, reportedCache))
     local inRate, outRate = number(p.input), number(p.output)
     local known = inRate > 0 or outRate > 0
+    local tierCache
     for _, tier in ipairs(object(p.tiers)) do
-        if input <= tier.upto then inRate, outRate = tier.input, tier.output; break end
+        if input <= tier.upto then
+            inRate, outRate, tierCache = tier.input, tier.output, tier.cached
+            break
+        end
     end
-    local cacheRate = number(p.cached) > 0 and p.cached or inRate
+    local cacheRate = number(tierCache) > 0 and tierCache or (number(p.cached) > 0 and p.cached or inRate)
     local charge, cost = total, 0
     if known then
         cost = math.floor((input-cached)*inRate + cached*cacheRate + output*outRate)
@@ -86,8 +125,17 @@ function Model.accounting(response, seat)
             charge = total - cached + math.ceil(cached * (cacheRate / inRate))
         end
     end
+    -- 1 USD = 1e10 ticks = 1e9 nano-USD = 1e6 micro-USD. Ticks win when both are set.
+    local function providerMicro(usage)
+        local ticks = whole(usage.cost_in_usd_ticks)
+        if ticks ~= nil then return math.floor(ticks / 10000) end
+        local nano = whole(usage.cost_in_nano_usd)
+        if nano ~= nil then return math.floor(nano / 1000) end
+    end
+    local reported = providerMicro(u)
+    if reported ~= nil then cost, known = reported, true end
     local notes = {}
-    if not known then notes[#notes + 1] = "Catalogue pricing is unknown; costMicro is not a free price." end
+    if reported == nil and not known then notes[#notes + 1] = "Catalogue pricing is unknown; costMicro is not a free price." end
     local silent = total <= 0 and input <= 0 and output <= 0
     -- A partial nonstandard count cannot debit the token ledger reliably.
     if total <= 0 and not silent then
@@ -98,7 +146,7 @@ function Model.accounting(response, seat)
     end
     if not valid then notes[#notes + 1] = "The provider returned an invalid token count; spending is incomplete." end
     return {units=total, cachedUnits=reportedCache, chargedUnits=charge > 0 and charge < total and charge or 0,
-        costMicro=cost, spendUnknown=not valid or silent or total <= 0}, known, notes
+        costMicro=cost, spendUnknown=not valid or (reported == nil and (silent or total <= 0))}, known, notes, reported ~= nil
 end
 
 local function reject(reason, text, reply)
@@ -106,6 +154,7 @@ local function reject(reason, text, reply)
     if reply then
         err.usage, err.modelAlias, err.model = reply.usage, reply.modelAlias, reply.model
         err.priceKnown, err.accountingNotes = reply.priceKnown, reply.accountingNotes
+        err.xaiRefusal = reply.xaiRefusal
     end
     error(err, 0)
 end
@@ -123,9 +172,10 @@ function Model.parse(response, seat)
         end
         error(err, 0)
     end
-    local usage, known, notes = Model.accounting(response, seat)
+    local usage, known, notes, reported = Model.accounting(response, seat)
     local reply = {answer="", calls=json.array(), items=response.output or json.array(), usage=usage,
         modelAlias=seat.alias, model=seat.model or seat.alias, priceKnown=known, accountingNotes=notes}
+    if seat.provider == "xai" or reported then reply.xaiSeat = true end
     reply.inputTokens = object(response.usage).input_tokens
     reply.outputTokens = object(response.usage).output_tokens
     if nonempty(response.status) and response.status ~= "completed" then
@@ -136,7 +186,10 @@ function Model.parse(response, seat)
         if item.status == "incomplete" then reject("model_incomplete", "Model output item is incomplete", reply) end
         if item.type == "message" then
             for _, part in ipairs(object(item.content)) do
-                if part.type == "refusal" then reject("model_refused", part.refusal or part.text or "Model refused", reply) end
+                if part.type == "refusal" then
+                    reply.xaiRefusal = reply.xaiSeat
+                    reject("model_refused", part.refusal or part.text or "Model refused", reply)
+                end
                 if nonempty(part.text) then text[#text + 1] = part.text end
             end
         elseif item.type == "function_call" then
@@ -156,6 +209,7 @@ function Model.parse(response, seat)
     if reply.answer == "" and #reply.calls == 0 then
         reject("model_empty", "Model returned neither text nor a supported function call", reply)
     end
+    reply.xaiSeat = nil
     return reply
 end
 
@@ -206,8 +260,13 @@ local function gatewayError(err)
     return type(err) == "table" and not nonempty(err.reason) and number(err.status) > 0
 end
 local function modelRefused(err)
+    if type(err) ~= "table" then return false end
+    -- Responses content type "refusal", only for an xAI seat or a reported xAI cost.
+    -- Asenta refusals keep the previous rule and do not select the spare alias.
+    if err.reason == "model_refused" and err.xaiRefusal then return true end
     if not gatewayError(err) then return false end
     local status, said = err.status, message(err):lower()
+    if type(err.body) == "table" and err.body.code == "not-found" then return true end
     if status == 401 or status == 403 or status == 404 then return true end
     if status == 429 then return said:find("day token limit", 1, true) ~= nil end
     for _, phrase in ipairs({"safety guard unavailable", "rate limit exceeded for /",
