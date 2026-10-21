@@ -103,7 +103,11 @@ int luaopen_extension(lua_State *L) { lua_pushstring(L, "native extension loaded
 		flags = []string{"-bundle", "-undefined", "dynamic_lookup"}
 	}
 	flags = append(flags, source, "-o", filepath.Join(directory, "extension.so"))
-	if output, err := exec.Command("cc", flags...).CombinedOutput(); err != nil {
+	compiler := os.Getenv("CC")
+	if compiler == "" {
+		compiler = "cc"
+	}
+	if output, err := exec.Command(compiler, flags...).CombinedOutput(); err != nil {
 		t.Fatalf("native module: %v\n%s", err, output)
 	}
 	script := filepath.Join(directory, "check.lua")

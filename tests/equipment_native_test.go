@@ -109,8 +109,24 @@ assert(registry:invoke{name="equipment_journal",args={unit="secret"}}.error)
 local journal=invoke("equipment_journal",{unit="pump",lines=2})
 assert(journal:find("high \u{00b0}C <U+41>",1,true) and journal:find("last message repeated 3 times",1,true))
 assert(not journal:find("forbidden",1,true) and not journal:find("initial",1,true) and not journal:find("secret",1,true))
-local alerts=json.encode(invoke("equipment_alerts"))
-assert(invoke("equipment_alerts").status=="alert")
+-- Snapshot fsync can exceed three 20 ms sampling intervals. A collection gap
+-- is then valid. Check the unchanged sensor threshold separately from latency.
+local function checkAlerts()
+  local alerts=invoke("equipment_alerts")
+  assert(alerts.enabled and alerts.status=="alert")
+  assert(alerts.thresholds.temperatureCelsius==40 and alerts.thresholds.memoryUsedPercent==50 and alerts.thresholds.load==0)
+  local thresholds,gaps=0,0
+  for _,issue in ipairs(alerts.issues) do
+    if issue.code=="gap" and issue.source=="collection" then
+      gaps=gaps+1
+    else
+      assert(issue.code=="threshold" and issue.source=="temperature:cpu-thermal",json.encode(alerts))
+      thresholds=thresholds+1
+    end
+  end
+  assert(thresholds==1 and gaps<=1,json.encode(alerts))
+end
+checkAlerts()
 local before=invoke("equipment_history",{limit=4})
 local status=assert(http.request{url=arg[3],method="GET",timeoutMs=3000,maxBytes=1024})
 assert(status==200)
@@ -118,7 +134,7 @@ local after=invoke("equipment_history",{limit=2})
 assert(after.retained==4 and #after.readings==2 and after.discarded>before.discarded)
 assert(Sequence.is(after.readings) and after.persisted and after.coverage=="retained_samples_only")
 assert(#after.readings[1].errors==0 and after.readings[1].observedAt<=after.readings[2].observedAt)
-assert(json.encode(invoke("equipment_alerts"))==alerts,"healthy numeric sampling changed stable alerts")
+checkAlerts()
 local discarded=after.discarded
 connection:close()
 assert(not connection:report().connected)

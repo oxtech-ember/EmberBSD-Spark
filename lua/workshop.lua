@@ -166,7 +166,7 @@ function Workshop.new(config, client, options)
     local limits, off = config.limits or {}, trim(os.getenv("OXTORG_WORKSHOP_OFF"))
     local disabled = off ~= "" and off ~= "0" and off ~= "false" and off ~= "False" and off ~= "FALSE"
     local self = setmetatable({config=config, client=client, options=options, children={}, roots={}, cached={}, held={},
-        enabled=limits.workshop == true and not disabled, lua=options.lua or "/usr/bin/lua",
+        enabled=limits.workshop == true and not disabled, lua=options.lua or (config.workshop or {}).lua or "lua5.5",
         output=limits.toolOutput or 24 * 1024, reserved={}}, Workshop)
     for _, name in ipairs(options.reserved or {}) do self.reserved[name] = true end
     local function reserve(name) if name and name ~= "" then self.reserved[name] = true end end

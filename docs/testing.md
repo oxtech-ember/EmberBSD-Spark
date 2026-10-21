@@ -7,8 +7,11 @@ It needs no private repository, deployed server, or model account.
 ## Full suite
 
 ```sh
-make test
+make CC=gcc test
 ```
+
+Install the `lua5.5` interpreter for workshop process checks.
+`CC` also selects compilers for native test helpers.
 
 The full suite covers MCP, knowledge, tools, task recovery, and native boundaries.
 It is separate from compilation and deployment.
@@ -30,7 +33,7 @@ It does not read Lua modules from the original checkout.
 
 Cross-compile the Go test executable on the host if the target has no Go compiler.
 Use the correct `GOOS` and `GOARCH` for that target.
-Transfer `tests/`, including `testdata/`, `lua/`, `examples/`, `netbsd/`,
+Transfer `tests/`, including `testdata/`, `lua/`, `examples/`, `emberbsd/`,
 and the required `build/` executables. Keep the repository layout.
 
 Run the test executable from `tests/` with the target's dkjson module path.

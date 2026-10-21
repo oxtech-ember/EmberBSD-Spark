@@ -73,7 +73,7 @@ local given={roleFile="role.md",server={baseUrl="https://example.test",tokenEnv=
 assert(root:write("config.json",json.encode(given)))
 local savedArg=arg
 arg={savedArg[1],savedArg[2] .. "/config.json"}
-assert(loadfile(savedArg[1] .. "/../netbsd/native-config.lua"))()
+assert(loadfile(savedArg[1] .. "/../emberbsd/native-config.lua"))()
 arg=savedArg
 local migrated=json.decode(assert(root:read("config.json.native")))
 assert(migrated.server.tokenEnv=="TOKEN_NAME" and migrated.roleFile=="role.md")

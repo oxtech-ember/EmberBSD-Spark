@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install the built application into an existing NetBSD equipment installation.
+# Install the built application into an existing EmberBSD equipment installation.
 # Install the prebuilt native payload; source files remain on the build host.
 set -eu
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
@@ -19,7 +19,7 @@ config_group=$(stat -f %Sg "$config")
 config_mode=$(stat -f %Lp "$config")
 # Prepare configuration before stopping the working service.
 LUA_PATH="$payload/lua/?.lua;;" "$payload/bin/agent-lua" \
-    "$payload/netbsd/native-config.lua" "$payload/lua" "$config"
+    "$payload/emberbsd/native-config.lua" "$payload/lua" "$config"
 chown "$config_owner:$config_group" "$config.native"
 chmod "$config_mode" "$config.native"
 
@@ -39,7 +39,7 @@ install -d -o root -g wheel -m 755 "$prefix/bin" "$prefix/lua"
 install -o root -g wheel -m 755 "$payload/bin/agent-lua" "$prefix/bin/agent-lua.new"
 mv "$prefix/bin/agent-lua.new" "$prefix/bin/agent-lua"
 rm -f "$prefix/bin/agent-supervisor" "$prefix/bin/bluetooth-broker" "$prefix/lua/bluetooth_broker.lua"
-install -o root -g wheel -m 755 "$payload/netbsd/agent-rc" /etc/rc.d/oxtorg_agent
+install -o root -g wheel -m 755 "$payload/emberbsd/agent-rc" /etc/rc.d/oxtorg_agent
 rm -rf "$prefix/lua"
 install -d -o root -g wheel -m 755 "$prefix/lua"
 install -o root -g wheel -m 644 "$payload/lua/"*.lua "$prefix/lua/"
@@ -48,9 +48,9 @@ install -o root -g wheel -m 644 "$payload/runtime-dependencies.txt" "$prefix/run
 install -o root -g wheel -m 644 "$source_dir/README.md" "$prefix/README.md"
 printf '%s\n' "$build_id" >"$prefix/BUILD"
 chmod 644 "$prefix/BUILD"
-install -o root -g wheel -m 755 "$payload/netbsd/agent.sh" /opt/oxtorg/bin/oxtorg-agent.new
+install -o root -g wheel -m 755 "$payload/emberbsd/agent.sh" /opt/oxtorg/bin/oxtorg-agent.new
 mv /opt/oxtorg/bin/oxtorg-agent.new /opt/oxtorg/bin/oxtorg-agent
-install -o root -g wheel -m 755 "$payload/netbsd/agent-run.sh" /opt/oxtorg/bin/oxtorg-agent-run.new
+install -o root -g wheel -m 755 "$payload/emberbsd/agent-run.sh" /opt/oxtorg/bin/oxtorg-agent-run.new
 mv /opt/oxtorg/bin/oxtorg-agent-run.new /opt/oxtorg/bin/oxtorg-agent-run
 install -o root -g oxtorg -m 4750 "$payload/bin/bluetooth-admin" /opt/oxtorg/bin/oxtorg-bluetooth-admin.new
 mv /opt/oxtorg/bin/oxtorg-bluetooth-admin.new /opt/oxtorg/bin/oxtorg-bluetooth-admin

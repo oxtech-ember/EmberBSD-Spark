@@ -10,16 +10,16 @@ Deploy completed programs to a VM or board for execution checks.
 
 ## Compatibility scripts
 
-The files in `netbsd/` preserve an existing service layout.
+The files in `emberbsd/` preserve an existing service layout.
 They are integration helpers, not a complete device installer.
 They expect the following installation-owned inputs:
 
 - The `oxtorg` user and group.
 - Configuration and role files under `/opt/oxtorg/roles/equipment-watch/`.
 - Credentials in `/etc/oxtorg/agent.env`.
-- A prepared payload with `bin/`, `lua/`, `netbsd/`, and dependency notices.
+- A prepared payload with `bin/`, `lua/`, `emberbsd/`, and dependency notices.
 
-`netbsd/install.sh` replaces that service and its payload.
+`emberbsd/install.sh` replaces that service and its payload.
 It does not create the server, account, role, or credentials.
 Review its fixed paths before using it with another installation.
 The server address comes from the configuration file.

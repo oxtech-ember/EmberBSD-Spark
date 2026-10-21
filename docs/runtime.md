@@ -88,6 +88,11 @@ Mutator modules return `name`, `digest`, and `hooks`.
 Supported hooks are `BeforeTurn`, `BeforeTool`, `AfterTool`, and `Call`.
 Trusted modules have the main process's access.
 Workshop-created Lua tools execute in separate processes.
+The default interpreter is `lua5.5` from the installation PATH.
+Set `workshop.lua` to an explicit Lua 5.5 executable path when needed.
+The child receives the installed dkjson module path.
+The portable bundle includes Lua in the agent process; it does not install
+this separate workshop interpreter.
 
 An MCP module exports `connect(spec, options)`.
 The connection provides `tools()`, `report()`, and `close()`.

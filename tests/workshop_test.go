@@ -14,8 +14,9 @@ import (
 )
 
 func TestLuaWorkshopBuildReviewAndProcess(t *testing.T) {
-	if _, err := os.Stat("/usr/bin/lua"); err != nil {
-		t.Skip("the workshop runs tools with the system interpreter /usr/bin/lua")
+	interpreter, err := exec.LookPath("lua5.5")
+	if err != nil {
+		t.Fatal("the workshop requires the common Lua 5.5 interpreter: ", err)
 	}
 	directory, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
@@ -82,7 +83,7 @@ function client:request(method,path,body)
     states={{name="echo",digest=expected,state="pending",built=true,taskId="task-one"}}
     return {candidate={digest=expected,state="pending"}}
 end
-local config={limits={workshop=true,sandbox="warn",workRoot=directory .. "/work",toolOutput=4096},server={tokenEnv="ASENTA_WORKSHOP_SECRET"}}
+local config={workshop={lua=arg[4]},limits={workshop=true,sandbox="warn",workRoot=directory .. "/work",toolOutput=4096},server={tokenEnv="ASENTA_WORKSHOP_SECRET"}}
 local context={origin="external",author={model="known-model"}}
 local workshop=Workshop.new(config,client,{root=directory .. "/shelf",stateRoot=directory .. "/state",timeoutMs=500})
 local task={taskId="task-one",ownerId="owner"}
@@ -141,7 +142,7 @@ assert(not pcall(Workshop.new,{limits={workshop=true,sandbox="required"}},client
 	modules, _ := filepath.Abs("../lua")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, binary, script, modules, directory, hex.EncodeToString(digest.Sum(nil)))
+	cmd := exec.CommandContext(ctx, binary, script, modules, directory, hex.EncodeToString(digest.Sum(nil)), interpreter)
 	cmd.Env = append(os.Environ(), "WORKSHOP_FIXTURE=passed", "ASENTA_WORKSHOP_SECRET=private", "OXTORG_SANDBOX=", "OXTORG_WORKSHOP_OFF=0")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Lua workshop contract failed: %v\n%s", err, output)
