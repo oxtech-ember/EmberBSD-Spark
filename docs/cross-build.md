@@ -22,8 +22,10 @@ export SPARK_DKJSON=/path/to/dkjson-2.11.lua
 scripts/build-emberbsd.sh
 ```
 
-The output is `build/emberbsd-aarch64/`. Set `SPARK_BUILD_DIR` for another
-absolute output directory. Set `SPARK_MAKE` if GNU Make has another name.
+The output is `build/emberbsd-aarch64/`. It includes the executable, source
+modules, version, licenses, and an ELF dependency list. Set `SPARK_BUILD_DIR` for another
+absolute output directory. Set `SPARK_MAKE` if GNU Make has another name. Set `SPARK_READELF` if
+the target `readelf` has another name.
 The host needs a Lua 5.5 interpreter for source packaging; set
 `SPARK_HOST_LUA` if it has another name. No target executable runs on the host.
 The target links to the common system Lua. The package contains the Spark

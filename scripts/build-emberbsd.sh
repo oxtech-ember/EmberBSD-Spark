@@ -39,5 +39,12 @@ export PKG_CONFIG_LIBDIR="$SPARK_SYSROOT/usr/pkg/lib/pkgconfig:$SPARK_SYSROOT/us
 "$interpreter" "$source_dir/package.lua" "$SPARK_DKJSON" "$version" \
     "$build_dir/oxtorg-agent.lua" "$source_dir"/lua/*.lua
 cp "$build_dir/agent-lua" "$build_dir/oxtorg-agent"
+cp "$source_dir/LICENSE" "$build_dir/LICENSE"
+cp "$source_dir/THIRD-PARTY.md" "$build_dir/THIRD-PARTY.md"
+readelf=${SPARK_READELF:-"${SPARK_CC%-gcc}-readelf"}
+{
+    printf 'Spark version: %s\nLua ABI: 5.5 (liblua.so.7)\ndkjson: 2.11\n' "$version"
+    "$readelf" -d "$build_dir/oxtorg-agent" | awk '/\(NEEDED\)/ { print $NF }'
+} > "$build_dir/runtime-dependencies.txt"
 printf '%s\n' "$version" > "$build_dir/BUILD"
 printf 'EmberBSD Spark package: %s\n' "$build_dir"
