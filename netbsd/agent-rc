@@ -1,0 +1,54 @@
+#!/bin/sh
+# PROVIDE: oxtorg_agent
+# REQUIRE: DAEMON oxtorg_bluetooth
+# KEYWORD: shutdown
+
+$_rc_subr_loaded . /etc/rc.subr
+name=oxtorg_agent
+rcvar=$name
+command=/opt/oxtorg/experiments/agent-lua/bin/agent-lua
+pidfile=/var/run/oxtorg/agent.pid
+start_cmd=oxtorg_agent_start
+
+oxtorg_agent_ready()
+{
+    if ! grep -q '^OXTORG_TOKEN=.' /etc/oxtorg/agent.env 2>/dev/null; then
+        echo "oxtorg_agent: set the installation token in /etc/oxtorg/agent.env"
+        return 1
+    fi
+}
+
+oxtorg_agent_start()
+{
+    # A new image has no installation credential yet. Defer startup
+    # without marking the system's first boot as failed.
+    oxtorg_agent_ready || return 0
+    if [ -n "$rc_pid" ]; then
+        echo "${name} already running? (pid=$rc_pid)." >&2
+        return 1
+    fi
+    install -d -o oxtorg -g oxtorg -m 755 /var/run/oxtorg || return 1
+    echo "Starting ${name}."
+    trap '' HUP
+    su -m oxtorg -c 'exec /opt/oxtorg/bin/oxtorg-agent-run' </dev/null >/dev/null 2>&1 &
+    launch_pid=$!
+    attempts=0
+    while [ "$attempts" -lt 15 ]; do
+        sleep 1
+        if ! kill -0 "$launch_pid" 2>/dev/null; then
+            wait "$launch_pid" || true
+            echo "${name} exited during startup; inspect syslog." >&2
+            return 1
+        fi
+        if [ -n "$(check_pidfile "$pidfile" "$command")" ]; then
+            return 0
+        fi
+        attempts=$((attempts + 1))
+    done
+    kill -TERM "$launch_pid" 2>/dev/null || true
+    echo "${name} did not create a live PID file; inspect syslog." >&2
+    return 1
+}
+
+load_rc_config $name
+run_rc_command "$1"

@@ -1,0 +1,25 @@
+{
+  "name": "lua-agent",
+  "roleFile": "role.md",
+  "server": {
+    "baseUrl": "https://asenta.example",
+    "tokenEnv": "OXTORG_AGENT_TOKEN"
+  },
+  "model": {
+    "baseUrl": "https://gateway.example",
+    "keyEnv": "OXTORG_MODEL_KEY",
+    "alias": "oxtech_lite"
+  },
+  "limits": {"maxTurns": 8},
+  "transport": {"timeoutMs": 30000, "maxBytes": 131072},
+  "luaTools": [{
+    "name": "decode_code",
+    "description": "Convert a four-digit hexadecimal OBD code to its P/C/B/U notation.",
+    "file": "decode_code.lua",
+    "parameters": {
+      "type": "object",
+      "properties": {"code": {"type": "string"}},
+      "required": ["code"]
+    }
+  }]
+}

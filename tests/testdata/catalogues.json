@@ -1,0 +1,52 @@
+[
+  {
+    "data": [
+      {
+        "id": "oxtech_lite",
+        "metadata": {
+          "display_name": "Luna",
+          "context_window": 400000,
+          "max_output_tokens": 128000,
+          "pricing": {
+            "currency": "USD",
+            "input_per_mtok": 1,
+            "output_per_mtok": 6,
+            "cached_input_per_mtok": 0.1,
+            "tiers": [
+              {
+                "up_to_tokens": 271999,
+                "input_per_mtok": 0.5,
+                "output_per_mtok": 3
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "data": [
+      {
+        "id": "oxtech_lite",
+        "name": "Luna",
+        "context_length": 400000,
+        "top_provider": {
+          "context_length": 400000,
+          "max_completion_tokens": 128000
+        },
+        "pricing": {
+          "prompt": "0.0000005",
+          "completion": "0.000003",
+          "overrides": [
+            {
+              "min_prompt_tokens": 272000,
+              "prompt": "0.000001",
+              "completion": "0.000006",
+              "input_cache_read": "0.0000001"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

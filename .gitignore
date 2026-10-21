@@ -1,0 +1,7 @@
+/build/
+/agent.json
+/.env
+/state/
+*.test
+/.local/
+/AGENTS.override.md
