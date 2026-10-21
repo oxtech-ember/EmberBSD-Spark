@@ -9,6 +9,7 @@ The server implementation and model service are separate dependencies.
 
 The model adapter uses `/v1/responses` and reads model pricing metadata.
 It does not implement every provider's API. `model.via=server` routes model calls through the task server.
+Direct xAI use is described in [xAI Grok](#xai-grok).
 The server protocol includes task leases, events, attachments, budgets, and shared knowledge.
 MCP uses the common tool registry. Local policy stays in Lua.
 
@@ -103,3 +104,41 @@ The host is synchronous. Parallel I/O requires a different adapter.
 The small profile does not implement the complete subagent or browser stack.
 `lua/main.lua` and `lua/agent.lua` retain the early protocol fixture.
 Production queue execution uses `serve.lua`.
+
+## xAI Grok
+
+`examples/grok.json` calls the xAI Responses API.
+Set `model.baseUrl` to `https://api.x.ai`.
+Set `model.keyEnv` to `XAI_API_KEY`.
+Set `model.alias` to a current model id, such as `grok-4.7`.
+The process reads the key from that environment variable.
+Do not put the key in the configuration file.
+
+A production device must set `model.via` to `server`.
+Leave `model.baseUrl` and `model.keyEnv` empty in that mode.
+The task server holds the xAI key. The device does not.
+
+The adapter sends `POST /v1/responses` with `store` set to false.
+It reads `GET /v1/models` for `context_length` and token prices.
+Those prices are USD cents per 100 million tokens in `prompt_text_token_price`, `cached_prompt_text_token_price`, and `completion_text_token_price`.
+Long-context prices use `long_context_threshold` and the matching `*_long_context` fields.
+A catalogue entry without prices does not fail the request.
+
+Use `usage.cost_in_usd_ticks` when that value is a non-negative integer.
+One USD is 10000000000 ticks.
+`costMicro` stores `floor(ticks / 10000)` micro-USD.
+If ticks are absent, `usage.cost_in_nano_usd` supplies `floor(nano / 1000)` micro-USD.
+Otherwise the adapter uses catalogue rates.
+Reasoning output items are not part of the answer.
+
+A message content part with `type` set to `refusal` selects `model.fallback` for an xAI model.
+A refusal that reports an xAI cost does the same on any seat.
+An HTTP error body with `code` set to `not-found` also selects `model.fallback`.
+The adapter does not send that failed request again.
+Asenta gateway phrases keep their existing fallback rules.
+
+Set `model.safetyIdEnv` to the name of an environment variable that holds a device id.
+The adapter then sends `safety_identifier` as the SHA-256 hex digest of that value.
+It does not send the raw id.
+Omit `model.safetyIdEnv` to leave `safety_identifier` unset.
+The xAI field is optional.
