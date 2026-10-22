@@ -171,6 +171,7 @@ function Workshop.new(config, client, options)
     for _, name in ipairs(options.reserved or {}) do self.reserved[name] = true end
     local function reserve(name) if name and name ~= "" then self.reserved[name] = true end end
     reserve((config.server or {}).tokenEnv); reserve((config.model or {}).keyEnv)
+    reserve((config.model or {}).safetyIdEnv)
     for _, server in ipairs(config.mcp or {}) do reserve(server.tokenEnv); for _, name in pairs(server.envFrom or {}) do reserve(name) end end
     if self.enabled then
         assert(limits.sandbox == "warn" or os.getenv("OXTORG_SANDBOX") == "warn", "workshop requires isolation; this Lua process adapter has none")

@@ -1,0 +1,17 @@
+{
+  "name": "grok-agent",
+  "roleFile": "role.md",
+  "server": {
+    "baseUrl": "https://asenta.example",
+    "tokenEnv": "OXTORG_AGENT_TOKEN"
+  },
+  "model": {
+    "baseUrl": "https://api.x.ai",
+    "keyEnv": "XAI_API_KEY",
+    "alias": "grok-4.7",
+    "fallback": "grok-4.6"
+  },
+  "note": "This file calls xAI directly, so XAI_API_KEY is present on the device. A production device must set model.via to server and must omit model.baseUrl and model.keyEnv. The task server then holds the xAI key.",
+  "limits": {"maxTurns": 8},
+  "transport": {"timeoutMs": 30000, "maxBytes": 131072}
+}
