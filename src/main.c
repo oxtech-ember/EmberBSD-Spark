@@ -211,7 +211,9 @@ static int http_module(lua_State *L) {
 
 static void terminate(int signal_number) {
     host_process_signal(signal_number);
+#ifndef SPARK_NO_BLUETOOTH
     host_bluetooth_signal(signal_number);
+#endif
     host_service_release();
     signal(signal_number, SIG_DFL);
     raise(signal_number);
@@ -246,8 +248,10 @@ int main(int argc, char **argv) {
     luaL_requiref(L, "asenta.fs", luaopen_asenta_fs, 0); lua_pop(L, 1);
     luaL_requiref(L, "asenta.process", luaopen_asenta_process, 0); lua_pop(L, 1);
     luaL_requiref(L, "asenta.equipment", luaopen_asenta_equipment, 0); lua_pop(L, 1);
+#ifndef SPARK_NO_BLUETOOTH
     luaL_requiref(L, "asenta.bluetooth", luaopen_asenta_bluetooth, 0); lua_pop(L, 1);
     luaL_requiref(L, "asenta.obd", luaopen_asenta_obd, 0); lua_pop(L, 1);
+#endif
     struct sigaction action = {0};
     action.sa_handler = terminate;
     sigemptyset(&action.sa_mask);

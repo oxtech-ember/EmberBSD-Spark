@@ -14,7 +14,7 @@ Keep provider details outside OS code and shared hardware contracts.
 [OS](https://github.com/oxtech-ember/EmberBSD) fixes belong in the OS repository.
 Shared dependencies belong in [Ports](https://github.com/oxtech-ember/EmberBSD-Ports).
 [Prebuild SDK](https://github.com/oxtech-ember/EmberBSD-SDK) prepares the host toolchain and sysroot.
-Spark builds with the common GCC16 and Lua 5.5 dependency set.
+Spark builds with the selected SDK compiler and common Ports Lua 5.5 dependency.
 A target device executes completed programs; it need not build the development tools.
 
 [Runtime](https://github.com/oxtech-ember/EmberBSD-Runtime) owns the planned device API and application lifecycle.

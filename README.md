@@ -40,8 +40,8 @@ programs are not implemented by this small profile.
 
 ## Build and try
 
-Install a C99 compiler, GNU Make 4+ or BSD make, pkg-config, Lua 5.5 development files,
-libcurl 7.85 or newer with TLS, and dkjson.
+Install a C99 compiler, GNU Make 4+ or BSD make, pkg-config, the common Lua 5.5
+and dkjson 2.11 packages, and libcurl with TLS.
 Linux and FreeBSD also need libcrypto development files.
 
 ```sh
@@ -52,16 +52,16 @@ make
 ```
 
 This local example needs no server or credentials.
-See [build instructions](docs/build.md) for host packages and the portable bundle.
-For an EmberBSD target, use the shared GCC16 compiler and SDK/Ports dependencies.
-See [cross builds](docs/cross-build.md). The GCC16 AArch64 build and an
-EmberBSD 11 board launch have passed with the common Lua 5.5 ABI.
+See [build instructions](docs/build.md) for host dependencies and packaging.
+For an EmberBSD target, use the selected SDK compiler and common Ports
+dependencies. See [cross builds](docs/cross-build.md). A previous GCC16
+AArch64 build and EmberBSD 11 board launch passed with the common Lua 5.5 ABI.
 Do not build development tools on the device.
 
 ## Documentation
 
 - [Build](docs/build.md): host builds, dependencies, and packaging.
-- [Cross build](docs/cross-build.md): GCC16, target libraries, and source modules.
+- [Cross build](docs/cross-build.md): SDK-selected compiler, target libraries, and source modules.
 - [EmberBSD integration](docs/emberbsd.md): ownership, workflows, and current boundaries.
 - [Runtime](docs/runtime.md): configuration, state, protocols, and extensions.
 - [NetBSD compatibility](docs/netbsd.md): system interfaces and existing service layouts.

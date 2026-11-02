@@ -9,12 +9,16 @@ void host_http_close(void);
 int luaopen_asenta_fs(lua_State *L);
 int host_fs_dup_root(lua_State *L, int index);
 int luaopen_asenta_equipment(lua_State *L);
+#ifndef SPARK_NO_BLUETOOTH
 int luaopen_asenta_bluetooth(lua_State *L);
 int luaopen_asenta_obd(lua_State *L);
+#endif
 int luaopen_asenta_process(lua_State *L);
 void host_process_close(void);
 void host_process_signal(int signal_number);
+#ifndef SPARK_NO_BLUETOOTH
 void host_bluetooth_signal(int signal_number);
+#endif
 int host_service_open(void);
 void host_service_release(void);
 void host_log(int error, const char *message);

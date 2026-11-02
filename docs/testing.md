@@ -10,16 +10,41 @@ It needs no private repository, deployed server, or model account.
 CC=gcc make CC=gcc test
 ```
 
-Install the `lua5.5` interpreter for workshop process checks.
+Install the common Lua 5.5 interpreter for workshop process checks.
 `CC` also selects compilers for native test helpers.
 
 The full suite covers MCP, knowledge, tools, task recovery, and native boundaries.
 It is separate from compilation and deployment.
 Set `GO_AGENT` only for an optional comparison with a compatible external executable.
 
+## Offline board check
+
+`examples/board-selftest.lua` runs fixed `uname`, `sysctl`, and `df` checks,
+then takes one local equipment reading through `asenta.equipment`. It makes no
+network request and prints no journal, interface address, or credential. It
+uses bounded subprocess output and a ten-second deadline. The default run does
+not touch camera or audio devices.
+
+After cross-building the selected target, copy the target `agent-lua` binary
+and this Lua file to the board, then run:
+
+```sh
+./agent-lua ./board-selftest.lua
+```
+
+Camera and audio probes are opt-in. Pass an absolute program path and its
+arguments after `--video` or `--audio`; each command runs without a shell, with
+a minimal environment, bounded output, and the same deadline. The example
+reports only its status and captured byte count for optional probes.
+Use only noninteractive diagnostic commands that are appropriate for the
+attached device.
+
 ## Package relocation
 
 ```sh
+SPARK_DKJSON=/path/to/host-pkg-llvm/share/lua/5.5/dkjson.lua \
+PKG_CONFIG=/path/to/host-pkg-llvm/bin/pkg-config \
+SPARK_HOST_LUA=/path/to/host-pkg-llvm/bin/lua5.5 \
 ./build.sh --output-dir "$PWD/build/package" --version spark-test
 cd tests
 OXTORG_NATIVE_AGENT_BUNDLE="$PWD/../build/package" \
@@ -62,8 +87,8 @@ A literal dkjson filename would shadow unrelated source and native modules.
 
 ## Validation scope
 
-The control build uses GCC 16.2.0, Lua 5.5.1, dkjson 2.11, and Go 1.27.2 on macOS arm64.
-Both the dynamic host executable and the static-Lua bundle compile.
+The control build uses Lua 5.5.1, dkjson 2.11, and Go 1.27.2 on macOS arm64.
+Host packages use the selected common Lua and curl libraries.
 The full extended host suite passes 75 tests. Only the optional external Go-agent comparison is skipped.
 Coverage includes HTTPS task flow, recovery, MCP, Lua workshop, bytecode, native modules, and package relocation.
 Bluetooth and equipment tests use local fixtures; they do not exercise a real adapter or sensor.
