@@ -21,6 +21,10 @@ case "$version" in ''|*[!a-zA-Z0-9._+-]*) echo 'Invalid Spark version' >&2; exit
 case "$target" in ''|*[!a-zA-Z0-9._+-]*) echo 'Invalid Spark target label' >&2; exit 2;; esac
 case "$enable_bluetooth" in yes|no) ;; *) echo 'SPARK_ENABLE_BLUETOOTH must be yes or no' >&2; exit 2;; esac
 case "$link_mode" in dynamic|static) ;; *) echo 'SPARK_LINK_MODE must be dynamic or static' >&2; exit 2;; esac
+if [ "$link_mode" = dynamic ]; then
+    : "${SPARK_AWK:?set SPARK_AWK to the selected native-prefix awk}"
+    case "$SPARK_AWK" in /*) ;; *) echo 'SPARK_AWK must be an absolute selected host tool' >&2; exit 2;; esac
+fi
 
 case "$SPARK_SYSROOT" in /*) ;; *) echo 'SPARK_SYSROOT must be absolute' >&2; exit 2;; esac
 case "$SPARK_CC" in /*) ;; *) echo 'SPARK_CC must be absolute' >&2; exit 2;; esac
@@ -29,7 +33,8 @@ case "$SPARK_CC" in /*) ;; *) echo 'SPARK_CC must be absolute' >&2; exit 2;; esa
 if command -v sha256 >/dev/null 2>&1; then
     actual=$(sha256 -q "$SPARK_DKJSON")
 else
-    actual=$(shasum -a 256 "$SPARK_DKJSON" | awk '{print $1}')
+    actual=$(shasum -a 256 "$SPARK_DKJSON")
+    actual=${actual%% *}
 fi
 [ "$actual" = 197cb50834c642f84b4cf99fe724932c50e6d9c92faec7ad89aa25e91df4d481 ] || {
     echo 'dkjson 2.11 SHA256 differs' >&2; exit 1;
@@ -41,7 +46,7 @@ unset PKG_CONFIG_PATH
 lua_version=$("$pkg_config" --modversion "$lua_package")
 case "$lua_version" in 5.5|5.5.*) ;; *) echo "Expected Lua 5.5, found $lua_version" >&2; exit 1;; esac
 pkg_config_static=no
-link_flags="--sysroot=$SPARK_SYSROOT -Wl,-E -Wl,-rpath-link,$SPARK_SYSROOT/usr/pkg/lib"
+link_flags="--sysroot=$SPARK_SYSROOT -Wl,-E -Wl,--gc-sections -Wl,-rpath-link,$SPARK_SYSROOT/usr/pkg/lib"
 if [ "$link_mode" = static ]; then
     pkg_config_static=yes
     link_flags="$link_flags -static"
@@ -59,31 +64,38 @@ trap 'rm -rf "$stage"' EXIT HUP INT TERM
 "$make_command" -C "$source_dir" TARGET_OS=NetBSD BUILD_DIR="$stage" \
     LUA_PACKAGE="$lua_package" ENABLE_BLUETOOTH="$enable_bluetooth" PKG_CONFIG_STATIC="$pkg_config_static" \
     PKG_CONFIG="$pkg_config" CC="$SPARK_CC" \
+    CFLAGS="-Os -ffunction-sections -fdata-sections -std=c99 -Wall -Wextra -Werror" \
     CPPFLAGS="--sysroot=$SPARK_SYSROOT" \
     LDFLAGS="$link_flags" all
 "$interpreter" "$source_dir/package.lua" "$SPARK_DKJSON" "$version" \
     "$stage/oxtorg-agent.lua" "$source_dir"/lua/*.lua
-cp "$stage/agent-lua" "$stage/oxtorg-agent"
+ln -s agent-lua "$stage/oxtorg-agent"
 cp "$source_dir/LICENSE" "$stage/LICENSE"
 cp "$source_dir/THIRD-PARTY.md" "$stage/THIRD-PARTY.md"
+cp "$source_dir/examples/board-selftest.lua" "$stage/board-selftest.lua"
 {
     printf 'Spark version: %s\nTarget: %s\nLink mode: %s\nBluetooth: %s\nLua: 5.5\ndkjson: 2.11\n' \
         "$version" "$target" "$link_mode" "$enable_bluetooth"
 } > "$stage/runtime-dependencies.txt"
 if [ "$link_mode" = dynamic ]; then
     "$readelf" -d "$stage/oxtorg-agent" > "$stage/runtime-elf.txt"
-    awk '/\(NEEDED\)/ { print $NF }' "$stage/runtime-elf.txt" >> "$stage/runtime-dependencies.txt"
+    "$SPARK_AWK" '/\(NEEDED\)/ { print $NF }' "$stage/runtime-elf.txt" >> "$stage/runtime-dependencies.txt"
 else
     "$readelf" -h "$stage/oxtorg-agent" > "$stage/runtime-elf.txt"
     printf 'Target dependencies are statically linked.\n' >> "$stage/runtime-dependencies.txt"
 fi
 printf '%s\n' "$version" > "$stage/BUILD"
 mkdir -p "$build_dir"
-for name in agent-lua oxtorg-agent oxtorg-agent.lua LICENSE THIRD-PARTY.md \
-    runtime-dependencies.txt runtime-elf.txt BUILD; do
+for name in agent-lua oxtorg-agent oxtorg-agent.lua board-selftest.lua \
+    LICENSE THIRD-PARTY.md runtime-dependencies.txt runtime-elf.txt BUILD; do
     [ -f "$stage/$name" ] || continue
-    cp "$stage/$name" "$build_dir/$name.new"
-    mv "$build_dir/$name.new" "$build_dir/$name"
+    new="$build_dir/.$name.$$.new"
+    if [ -L "$stage/$name" ]; then
+        ln -s "$(readlink "$stage/$name")" "$new"
+    else
+        cp "$stage/$name" "$new"
+    fi
+    mv -f "$new" "$build_dir/$name"
 done
 if [ "$enable_bluetooth" = no ]; then
     rm -f "$build_dir/bluetooth-admin"

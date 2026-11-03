@@ -79,7 +79,7 @@ end
 
 local checks = {
     run("kernel", {"/usr/bin/uname", "-srm"}, true),
-    run("memory_pages", {"/usr/bin/env", "sysctl", "-n", "hw.ncpu"}, true),
+    run("cpu_count", {"/usr/bin/env", "sysctl", "-n", "hw.ncpu"}, true),
     run("memory_bytes", {"/usr/bin/env", "sysctl", "-n", "hw.physmem"}, true),
     run("root_filesystem", {"/bin/df", "-k", "/"}, true),
 }

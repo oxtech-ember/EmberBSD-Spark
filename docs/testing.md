@@ -25,8 +25,8 @@ network request and prints no journal, interface address, or credential. It
 uses bounded subprocess output and a ten-second deadline. The default run does
 not touch camera or audio devices.
 
-After cross-building the selected target, copy the target `agent-lua` binary
-and this Lua file to the board, then run:
+The cross-build package includes `agent-lua`, the bundled `oxtorg-agent.lua`,
+and this Lua file. Copy those three files to the board, then run:
 
 ```sh
 ./agent-lua ./board-selftest.lua

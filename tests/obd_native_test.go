@@ -73,10 +73,22 @@ func compileNativeOBD(t *testing.T, directory string) string {
 	src, _ := filepath.Abs("../src")
 	binary := filepath.Join(directory, "obd-harness")
 	flags := []string{"-Os", "-std=c99", "-Wall", "-Wextra", "-Werror", "-I" + src}
+	pkgConfig := os.Getenv("PKG_CONFIG")
+	if pkgConfig == "" {
+		pkgConfig = "pkg-config"
+	}
+	luaPackage := os.Getenv("SPARK_LUA_PACKAGE")
+	if luaPackage == "" {
+		luaPackage = "lua-5.5"
+	}
 	if configured := os.Getenv("OBD_TEST_CFLAGS"); configured != "" {
 		flags = append(flags, strings.Fields(configured)...)
-	} else if runtime.GOOS != "netbsd" {
-		out, err := exec.Command("pkg-config", "--cflags", "lua5.5", "libcrypto").Output()
+	} else {
+		packages := []string{luaPackage}
+		if runtime.GOOS != "netbsd" && runtime.GOOS != "darwin" {
+			packages = append(packages, "libcrypto")
+		}
+		out, err := exec.Command(pkgConfig, append([]string{"--cflags"}, packages...)...).Output()
 		if err != nil {
 			t.Fatalf("native OBD tests need Lua 5.5 headers; set OBD_TEST_CFLAGS and OBD_TEST_LIBS: %v", err)
 		}
@@ -85,14 +97,19 @@ func compileNativeOBD(t *testing.T, directory string) string {
 	flags = append(flags, source, filepath.Join(src, "fs.c"), "-o", binary)
 	if configured := os.Getenv("OBD_TEST_LIBS"); configured != "" {
 		flags = append(flags, strings.Fields(configured)...)
-	} else if runtime.GOOS == "netbsd" {
-		flags = append(flags, "-llua", "-lbluetooth")
 	} else {
-		out, err := exec.Command("pkg-config", "--libs", "lua5.5", "libcrypto").Output()
+		packages := []string{luaPackage}
+		if runtime.GOOS != "netbsd" && runtime.GOOS != "darwin" {
+			packages = append(packages, "libcrypto")
+		}
+		out, err := exec.Command(pkgConfig, append([]string{"--libs"}, packages...)...).Output()
 		if err != nil {
 			t.Fatal(err)
 		}
 		flags = append(flags, strings.Fields(string(out))...)
+		if runtime.GOOS == "netbsd" {
+			flags = append(flags, "-lbluetooth")
+		}
 	}
 	compiler := os.Getenv("CC")
 	if compiler == "" {
