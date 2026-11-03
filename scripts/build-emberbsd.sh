@@ -21,11 +21,6 @@ case "$version" in ''|*[!a-zA-Z0-9._+-]*) echo 'Invalid Spark version' >&2; exit
 case "$target" in ''|*[!a-zA-Z0-9._+-]*) echo 'Invalid Spark target label' >&2; exit 2;; esac
 case "$enable_bluetooth" in yes|no) ;; *) echo 'SPARK_ENABLE_BLUETOOTH must be yes or no' >&2; exit 2;; esac
 case "$link_mode" in dynamic|static) ;; *) echo 'SPARK_LINK_MODE must be dynamic or static' >&2; exit 2;; esac
-if [ "$link_mode" = dynamic ]; then
-    : "${SPARK_AWK:?set SPARK_AWK to the selected native-prefix awk}"
-    case "$SPARK_AWK" in /*) ;; *) echo 'SPARK_AWK must be an absolute selected host tool' >&2; exit 2;; esac
-fi
-
 case "$SPARK_SYSROOT" in /*) ;; *) echo 'SPARK_SYSROOT must be absolute' >&2; exit 2;; esac
 case "$SPARK_CC" in /*) ;; *) echo 'SPARK_CC must be absolute' >&2; exit 2;; esac
 [ -d "$SPARK_SYSROOT/usr/include" ] || { echo 'Missing EmberBSD headers' >&2; exit 1; }
@@ -79,7 +74,16 @@ cp "$source_dir/examples/board-selftest.lua" "$stage/board-selftest.lua"
 } > "$stage/runtime-dependencies.txt"
 if [ "$link_mode" = dynamic ]; then
     "$readelf" -d "$stage/oxtorg-agent" > "$stage/runtime-elf.txt"
-    "$SPARK_AWK" '/\(NEEDED\)/ { print $NF }' "$stage/runtime-elf.txt" >> "$stage/runtime-dependencies.txt"
+    while IFS= read -r line; do
+        case "$line" in
+        *"(NEEDED)"*)
+            case "$line" in *\[*\]*) ;; *) continue ;; esac
+            library=${line#*\[}
+            library=${library%%\]*}
+            [ -z "$library" ] || printf '[%s]\n' "$library" >> "$stage/runtime-dependencies.txt"
+            ;;
+        esac
+    done < "$stage/runtime-elf.txt"
 else
     "$readelf" -h "$stage/oxtorg-agent" > "$stage/runtime-elf.txt"
     printf 'Target dependencies are statically linked.\n' >> "$stage/runtime-dependencies.txt"

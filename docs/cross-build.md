@@ -43,8 +43,8 @@ The host needs a Lua 5.5 interpreter for source packaging; set
 The target links to the common Lua library (dynamically or statically as
 selected). The package contains `agent-lua`, the compatible `oxtorg-agent`
 symlink, bundled Lua modules, and `board-selftest.lua`; it does not contain a
-second Lua runtime. Dynamic builds also require `SPARK_AWK` to name the
-selected host awk used to list ELF dependencies.
+second Lua runtime. Dynamic builds list ELF dependencies with the build
+script's POSIX shell parser.
 
 ## Package source modules
 
