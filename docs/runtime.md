@@ -7,9 +7,9 @@ Set the task server, model endpoint, and model alias for your installation.
 The example addresses are placeholders. Keys come from the named environment variables.
 The server implementation and model service are separate dependencies.
 
-The model adapter uses `/v1/responses` and reads model pricing metadata.
-It does not implement every provider's API. `model.via=server` routes model calls through the task server.
-Direct xAI use is described in [xAI Grok](#xai-grok).
+The model adapter uses the Responses API and reads model catalogue metadata.
+Choose direct or server-routed model access for the installation as described below.
+The [xAI Grok](#xai-grok) example uses direct access.
 The server protocol includes task leases, events, attachments, budgets, and shared knowledge.
 MCP uses the common tool registry. Local policy stays in Lua.
 
@@ -31,6 +31,31 @@ The portable bundle accepts `-config`, `-server`, `-version`,
 Both short and double-dash forms are supported where the parser declares them.
 `-lang` selects an adjacent role translation. Built-in messages are English.
 `-accept-tools` accepts pending MCP declarations without a model request.
+
+## Model routing
+
+Choose the route according to endpoint compatibility, credential placement and service availability.
+Both routes are implemented by [the client](../lua/client.lua); the client applies no separate production-only route rule.
+
+| Route | Configuration | Endpoint and credential |
+|---|---|---|
+| Direct | Leave `model.via` unset. Set `model.baseUrl`; set `model.keyEnv` when the endpoint requires a token. | Calls use the selected model base URL. The process reads the model token from the named environment variable. |
+| Through the task server | Set `model.via` to `server`. Leave `model.baseUrl` and `model.keyEnv` absent or empty. | Calls use `server.baseUrl` plus `/model` and the token named by `server.tokenEnv`. The server supplies provider access. |
+
+Use direct access for a compatible provider, gateway or local model service.
+Use server routing when the installation centralizes provider credentials and model access at its task server.
+For server routing, `OXTORG_MODEL_DOOR` can replace the default model base URL; that destination receives the same server token.
+The client rejects a server-routed configuration that also supplies a model base URL or model key variable.
+
+In both routes, [the model adapter](../lua/model.lua) requests `GET /v1/models` and `POST /v1/responses`.
+Select an endpoint that implements its Responses messages, tool calls and catalogue fields.
+The adapter rejects a selected model whose catalogue declares another API.
+The xAI and gateway fixtures exercise supported response and accounting shapes; they are not acceptance of every provider.
+
+Model routing is separate from task execution.
+The current application still uses the task server for identity, task leases, history and other task operations.
+A direct model endpoint therefore does not make the current task loop serverless.
+Report source inspection, fixture checks and actual endpoint execution as separate evidence.
 
 ## State and process lifecycle
 
@@ -111,12 +136,11 @@ Production queue execution uses `serve.lua`.
 Set `model.baseUrl` to `https://api.x.ai`.
 Set `model.keyEnv` to `XAI_API_KEY`.
 Set `model.alias` to a current model id, such as `grok-4.7`.
-The process reads the key from that environment variable.
-Do not put the key in the configuration file.
+Supply the key through that environment variable; the JSON stores its variable name.
 
-A production device must set `model.via` to `server`.
-Leave `model.baseUrl` and `model.keyEnv` empty in that mode.
-The task server holds the xAI key. The device does not.
+Use this direct configuration when the installation places xAI access on the device.
+For server-held xAI access, select the server route above and configure xAI at the task server.
+Choose the route from the installation's requirements, including for production devices.
 
 The adapter sends `POST /v1/responses` with `store` set to false.
 It reads `GET /v1/models` for `context_length` and token prices.

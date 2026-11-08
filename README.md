@@ -34,6 +34,8 @@ GPU/NPU services, and the distinction between current code and planned contracts
 - Read equipment metrics and use the Bluetooth and ELM327 C adapters.
 
 The current task loop requires a compatible server. That server is not included.
+Model calls can go directly to a compatible endpoint or through that server.
+Choose the [model route](docs/runtime.md#model-routing) for the installation; direct model access still uses the task server for task operations.
 The local test fixture runs without a private service or model account.
 Browser control, PDF reading, full subagent profiles, and arbitrary background
 programs are not implemented by this small profile.
