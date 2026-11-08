@@ -62,7 +62,7 @@ Transfer `tests/`, including `testdata/`, `lua/`, `examples/`, `emberbsd/`,
 and the required `build/` executables. Keep the repository layout.
 
 Run the test executable from `tests/` with the target's dkjson module path.
-Do not run host binaries or host Lua bytecode on the target.
+Run target-built binaries and packaged Lua source modules on the target.
 Report compilation, fixture execution, device behavior, and long-run results separately.
 
 ## Extended host checks

@@ -56,7 +56,7 @@ See [build instructions](docs/build.md) for host dependencies and packaging.
 For an EmberBSD target, use the selected SDK compiler and common Ports
 dependencies. See [cross builds](docs/cross-build.md). A previous GCC16
 AArch64 build and EmberBSD 11 board launch passed with the common Lua 5.5 ABI.
-Do not build development tools on the device.
+Build development tools on the development host.
 
 ## Documentation
 

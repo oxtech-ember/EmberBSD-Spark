@@ -11,7 +11,7 @@ default and additionally needs the OS Bluetooth headers and library. A target
 without that service can set `SPARK_ENABLE_BLUETOOTH=no`; its build does not
 register the Bluetooth or OBD modules.
 Keep the compiler, ABI, runtime, and dependency set consistent.
-Do not substitute upstream NetBSD components.
+Use EmberBSD-produced OS components with the matching provenance.
 
 ## Build and package
 

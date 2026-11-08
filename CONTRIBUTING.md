@@ -11,10 +11,11 @@ Use NetBSD KNF for new C code.
 
 Preserve existing protocol identifiers and explain interface changes.
 Keep C system modules separate from Lua application logic.
-Do not add a required Go or Python process on the device.
+Keep required device runtime dependencies in C and Lua. Keep Go and Python tooling optional.
 
-Use the shared GCC16 compiler and common Lua 5.5/Ports dependencies for EmberBSD targets.
-Do not add an older dependency version for one consumer.
+Use the selected SDK compiler and common Ports dependencies for EmberBSD targets.
+Follow the [SDK tool-selection contract](https://github.com/oxtech-ember/EmberBSD-SDK/blob/main/docs/tool-selection.md) and [cross-build guide](docs/cross-build.md).
+Update each consumer to the shared dependency version.
 Keep the target compiler, ABI, sysroot, and dependency provenance consistent.
 Build on the development host. Use devices and VMs for execution checks.
 Dependency and OS fixes belong in their owning repositories.
@@ -22,7 +23,7 @@ Dependency and OS fixes belong in their owning repositories.
 Choose checks that exercise the change.
 Run Cppcheck with the actual build flags for C changes.
 Use GCC analysis and Clang Static Analyzer for affected paths.
-Clang is an analysis tool, not the EmberBSD target compiler.
+Select the target compiler through the SDK profile; select analysis tools for the checks above.
 Use Valgrind Memcheck on a supported host, or name the sanitizer used instead.
 A clean host check does not prove device or long-run behavior.
 

@@ -2,9 +2,9 @@
 
 EmberBSD retains the NetBSD ABI and platform identifiers where required.
 Spark uses those interfaces for libc, libprop, Bluetooth, process state, and syslog.
-The target OS is EmberBSD. Do not substitute upstream NetBSD headers or libc in its sysroot.
+The target OS is EmberBSD. Populate its sysroot with the matching EmberBSD headers and libc.
 
-Build target programs on the development host with the common GCC16 toolchain.
+Build target programs on the development host with the selected SDK toolchain.
 Use the [cross-build instructions](cross-build.md).
 Deploy completed programs to a VM or board for execution checks.
 
