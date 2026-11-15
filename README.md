@@ -7,6 +7,9 @@ C provides system operations. Lua implements task execution, model requests,
 MCP, knowledge files, and tools. The device needs no Go or Python process.
 The base OS does not depend on Spark, an AI provider, or a task service.
 
+Read the [EmberBSD Developer Guide](https://github.com/oxtech-ember/EmberBSD-Docs/blob/main/modules/spark.md)
+for Spark's role and its interfaces to the rest of the system.
+
 ## Place in EmberBSD
 
 Spark turns a request into calls to installed tools and tracks the task result.
