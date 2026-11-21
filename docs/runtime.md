@@ -57,6 +57,31 @@ The current application still uses the task server for identity, task leases, hi
 A direct model endpoint therefore does not make the current task loop serverless.
 Report source inspection, fixture checks and actual endpoint execution as separate evidence.
 
+### Ask about an accepted photo
+
+The [photo worker](../examples/ask-photo.lua) sends a seekable PNG and the selected guide step
+to the configured Responses model. It writes one short English answer to stdout for the
+Workshop bitmap display. The caller chooses the photo and starts a separate worker on consent.
+One invocation authorizes one photo POST to `model.alias`. The worker uses the normal
+model route, TLS configuration and credential environment. An HTTP failure returns a
+nonzero exit status. Pressing Retry in the application starts a new request.
+
+With the Spark modules and dkjson on `LUA_PATH`, run:
+
+```sh
+agent-lua examples/ask-photo.lua config.json part.png \
+  'Connector inspection' 2 'Inspect the latch' 'Check the tip of the locking tab.'
+```
+
+Use `-` for an open, seekable PNG on standard input. The worker streams Base64 in the
+JSON upload. It accepts a PNG up to 2 MiB and applies separate upload and response bounds.
+For a compact board installation, produce the self-contained worker on the development host:
+
+```sh
+lua5.5 package.lua "$DKJSON" workshop ask-workshop.lua --entry examples/ask-photo.lua \
+  lua/base64.lua lua/json.lua lua/client.lua lua/model.lua
+```
+
 ## State and process lifecycle
 
 Set state through `--state-root`, `OXTORG_LUA_STATE_ROOT`, or `stateRoot`.
@@ -73,7 +98,7 @@ This reduces resident memory. Large individual responses and TLS still affect th
 The MCP description page is currently decoded as one value.
 A hook that asks for all records can also materialize them.
 
-`transport.maxBytes` sets the response limit. The host initializes libcurl on the first valid HTTP request and reuses the transport for subsequent requests. Local Lua scripts can run without initializing a network transport.
+`transport.maxBytes` bounds the response and, by default, the request body. Set `transport.maxUploadBytes` to give the upload a separate limit. The host initializes libcurl on the first valid HTTP request and reuses the transport for subsequent requests. Local Lua scripts can run without initializing a network transport.
 `historyMaxBytes` can set a separate history limit.
 Without a configured response limit, the current default is 32 MiB.
 

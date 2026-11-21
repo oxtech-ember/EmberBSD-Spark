@@ -1,4 +1,5 @@
 local codec = require("dkjson")
+local base64 = require("base64")
 local M = {null = codec.null}
 function M.array(value) return setmetatable(value or {}, {__jsontype = "array"}) end
 function M.decode(text)
@@ -25,11 +26,43 @@ local function array_length(value)
     return maximum
 end
 
-local function fragments(value)
+-- A seekable, borrowed attachment. The caller keeps it open and its
+-- contents stable through completion of the HTTP request.
+local dataURI = {}
+function M.data_uri(file, mediaType, limit)
+    assert(type(mediaType) == "string" and mediaType:match("^[a-z0-9.+-]+/[a-z0-9.+-]+$"), "invalid media type")
+    assert(math.type(limit) == "integer" and limit > 0, "attachment requires a byte limit")
+    local size = assert(file:seek("end"))
+    assert(size > 0 and size <= limit and size <= (math.maxinteger // 4 - 1) * 3, "invalid attachment size")
+    return setmetatable({file=file, size=size, prefix='"data:' .. mediaType .. ';base64,'}, dataURI)
+end
+
+local function uri_fragments(item, measuring)
+    coroutine.yield(item.prefix)
+    if measuring then
+        coroutine.yield(((item.size + 2) // 3) * 4)
+    else
+        assert(item.file:seek("set", 0))
+        local remaining = item.size
+        while remaining > 0 do
+            local n = math.min(remaining, 3072)
+            local bytes = assert(item.file:read(n), "short attachment")
+            assert(#bytes == n, "short attachment")
+            coroutine.yield(base64(bytes))
+            remaining = remaining - n
+        end
+        local extra, err = item.file:read(1)
+        assert(not err and extra == nil, "attachment changed length")
+    end
+    coroutine.yield('"')
+end
+
+local function fragments(value, measuring)
     return coroutine.wrap(function()
         local active={}
         local function emit(item)
             if type(item) ~= "table" or item == M.null then coroutine.yield(M.encode(item)); return end
+            if getmetatable(item) == dataURI then return uri_fragments(item, measuring) end
             assert(not active[item], "JSON table contains a reference cycle")
             active[item]=true
             local length=array_length(item)
@@ -63,9 +96,10 @@ end
 -- traversal counts bytes, the second emits them. No encoded document is kept.
 function M.reader(value)
     local length=0
-    for piece in fragments(value) do
-        assert(#piece <= math.maxinteger-length, "encoded JSON is too large")
-        length=length+#piece
+    for piece in fragments(value, true) do
+        local count=type(piece) == "number" and piece or #piece
+        assert(count <= math.maxinteger-length, "encoded JSON is too large")
+        length=length+count
     end
     local nextPiece=fragments(value)
     local piece,at,finished="",1,false

@@ -159,6 +159,9 @@ int host_http(lua_State *L) {
     luaL_argcheck(L, !active, 1, "HTTP callback cannot start another request");
     lua_Integer limit = number(L, "maxBytes", 131072);
     luaL_argcheck(L, (lua_Integer)(size_t)limit == limit, 1, "maxBytes exceeds the addressable size");
+    lua_Integer upload_limit = number(L, "maxUploadBytes", limit);
+    luaL_argcheck(L, (lua_Integer)(size_t)upload_limit == upload_limit, 1,
+        "maxUploadBytes exceeds the addressable size");
     lua_Integer timeout = number(L, "timeoutMs", 30000);
     const char *url = field(L, "url", NULL);
     const char *method = field(L, "method", "GET");
@@ -174,12 +177,12 @@ int host_http(lua_State *L) {
         luaL_argcheck(L, !body, 1, "body and bodyReader are mutually exclusive");
         lua_getfield(L, 1, "bodyBytes");
         lua_Integer bytes = luaL_checkinteger(L, -1);
-        luaL_argcheck(L, bytes >= 0 && bytes <= limit, 1, "bodyBytes must be within maxBytes");
+        luaL_argcheck(L, bytes >= 0 && bytes <= upload_limit, 1, "bodyBytes exceeds upload limit");
         length = (size_t)bytes;
         lua_pop(L, 1);
     }
     luaL_argcheck(L, url != NULL, 1, "url is required");
-    luaL_argcheck(L, length <= (size_t)limit, 1, "request exceeds maxBytes");
+    luaL_argcheck(L, length <= (size_t)upload_limit, 1, "request exceeds upload limit");
     luaL_argcheck(L, !strchr(token, '\r') && !strchr(token, '\n'), 1, "invalid bearer token");
     lua_getfield(L, 1, "consume");
     int consume = lua_isnil(L, -1) ? 0 : lua_gettop(L);

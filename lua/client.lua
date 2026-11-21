@@ -47,6 +47,7 @@ function Client:request(method, path, value, model, options)
     local request = {method=method, url=assert(base, "endpoint is required"):gsub("/$", "") .. path,
         token=token, body=options.rawBody, caFile=transport.caFile,
         timeoutMs=options.timeoutMs or transport.timeoutMs,
+        maxUploadBytes=options.maxUploadBytes or transport.maxUploadBytes,
         maxBytes=options.maxBytes or transport.maxBytes or 32*1024*1024, headers=options.headers, consume=options.consume}
     if options.rawBody == nil and value ~= nil then request.bodyReader,request.bodyBytes=json.reader(value) end
     local status, body, headers = http.request(request)

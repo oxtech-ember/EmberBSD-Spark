@@ -217,7 +217,7 @@ function Model.new(config, client)
     return setmetatable({config=config.model or {}, client=client, seats={}, chosen={}}, Model)
 end
 
-function Model:open(alias)
+function Model:open(alias, exact)
     alias = alias or self.config.alias
     assert(nonempty(alias), "model.alias is required")
     if not self.catalogueRead then
@@ -232,10 +232,10 @@ function Model:open(alias)
             self.catalogueError = message(catalogue)
         end
     end
-    local selected = self.chosen[alias] or alias
+    local selected = not exact and self.chosen[alias] or alias
     local seat = self.seats[selected]
     local spare = self.config.fallback
-    if not self.catalogueError and (not seat or seat.contextWindow <= 0) and nonempty(spare) and selected ~= spare then
+    if not exact and not self.catalogueError and (not seat or seat.contextWindow <= 0) and nonempty(spare) and selected ~= spare then
         selected, seat = spare, self.seats[spare]
         self.chosen[alias] = spare
     end
@@ -298,9 +298,10 @@ local function safetyIdentifier(config)
     return require("asenta.fs").sha256(raw)
 end
 
-function Model:request(input, definitions, task)
+function Model:request(input, definitions, task, options)
+    local once = options and options.singleAttempt
     local primary = task and nonempty(task.seat) and task.seat or self.config.alias
-    local seat = self:open(primary)
+    local seat = self:open(primary, once)
     -- Project one declaration at a time, retaining only the source sequence.
     local tools = setmetatable({}, {__jsontype="array",__len=function() return #(definitions or {}) end,
         __index=function(_,index)
@@ -316,7 +317,7 @@ function Model:request(input, definitions, task)
             store=false, max_output_tokens=reserve(at, self.config.maxAnswer),
             safety_identifier=safetyIdentifier(self.config)}
         local ok, response, status = pcall(self.client.request, self.client, "POST", "/v1/responses", request, true)
-        if not ok and gatewayError(response) then
+        if not ok and not once and gatewayError(response) then
             local room = affordable(message(response), request.max_output_tokens)
             if room then
                 request.max_output_tokens = room
@@ -330,7 +331,7 @@ function Model:request(input, definitions, task)
     end
     local ok, reply = turn(seat)
     local spare = self.config.fallback
-    if not ok and modelRefused(reply) and nonempty(spare) and seat.alias ~= spare then
+    if not ok and not once and modelRefused(reply) and nonempty(spare) and seat.alias ~= spare then
         self.chosen[primary] = spare
         seat = self:open(primary)
         ok, reply = turn(seat)

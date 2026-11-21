@@ -17,10 +17,18 @@ local function module(name, body)
 end
 module("dkjson", read(jsonPath))
 module("version", "return " .. string.format("%q", version))
-for index = 4, #arg do
+local entry, firstModule = nil, 4
+if arg[4] == "--entry" then
+    entry, firstModule = assert(arg[5], "entry script required"), 6
+end
+for index = firstModule, #arg do
     local path = arg[index]
     local name = assert(path:match("([^/]+)%.lua$"))
     if name ~= "version" then module(name, read(path)) end
 end
-file:write("return function() return require('serve') end\n")
+if entry then
+    file:write(read(entry), "\n")
+else
+    file:write("return function() return require('serve') end\n")
+end
 assert(file:close())

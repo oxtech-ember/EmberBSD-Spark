@@ -52,6 +52,7 @@ package:
 
 test: all $(BUILD_DIR)/http-lifecycle-test $(BUILD_DIR)/bluetooth-native-test $(BUILD_DIR)/bluetooth-admin-test
 	sh tests/http-lifecycle.sh $(BUILD_DIR)/http-lifecycle-test
+	$(BUILD_DIR)/agent-lua tests/photo-uri.lua
 	cd tests && $(GO) test -count=1 -v .
 
 clean:

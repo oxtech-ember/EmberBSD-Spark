@@ -64,21 +64,12 @@ local function readJSON(root, path)
     return ok and object(value) and value or nil, ok and nil or tostring(value)
 end
 
-local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local base64 = require("base64")
 local function headerValue(value)
     value = tostring(value)
     if value ~= "" and not value:find("[^ -~]") and not value:match("^%s") and
         not value:match("%s$") and value:sub(1, 9) ~= "=?base64?" then return value end
-    local encoded = {}
-    for i = 1, #value, 3 do
-        local a, b, c = value:byte(i, i + 2)
-        local n = (a << 16) | ((b or 0) << 8) | (c or 0)
-        encoded[#encoded + 1] = alphabet:sub((n >> 18) + 1, (n >> 18) + 1) ..
-            alphabet:sub(((n >> 12) & 63) + 1, ((n >> 12) & 63) + 1) ..
-            (b and alphabet:sub(((n >> 6) & 63) + 1, ((n >> 6) & 63) + 1) or "=") ..
-            (c and alphabet:sub((n & 63) + 1, (n & 63) + 1) or "=")
-    end
-    return "=?base64?" .. table.concat(encoded) .. "?="
+    return "=?base64?" .. base64(value) .. "?="
 end
 
 local function mirrors(schema, path, taken, result)
