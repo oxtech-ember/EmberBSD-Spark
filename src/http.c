@@ -201,8 +201,17 @@ int host_http(lua_State *L) {
             lua_pop(L, 1);
         }
     }
-    if (!connection) connection = curl_easy_init();
-    if (!connection) return luaL_error(L, "cannot create HTTP transport");
+    if (!connection) {
+        /* The Lua event loop owns the process's single HTTP transport. */
+        CURLcode init = curl_global_init(CURL_GLOBAL_DEFAULT);
+        if (init != CURLE_OK)
+            return luaL_error(L, "cannot initialize HTTP transport: %s", curl_easy_strerror(init));
+        connection = curl_easy_init();
+        if (!connection) {
+            curl_global_cleanup();
+            return luaL_error(L, "cannot create HTTP transport");
+        }
+    }
     curl_easy_reset(connection); /* Keeps the connection and TLS session cache. */
     struct transfer transfer = {.L=L, .body={.limit=(size_t)limit},
         .headers={.limit=65536}, .consume=consume, .callback_error=LUA_NOREF,
@@ -282,6 +291,9 @@ allocation:
 }
 
 void host_http_close(void) {
-    if (connection) curl_easy_cleanup(connection);
-    connection = NULL;
+    if (connection) {
+        curl_easy_cleanup(connection);
+        connection = NULL;
+        curl_global_cleanup();
+    }
 }

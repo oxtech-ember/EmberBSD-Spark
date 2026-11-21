@@ -73,7 +73,7 @@ This reduces resident memory. Large individual responses and TLS still affect th
 The MCP description page is currently decoded as one value.
 A hook that asks for all records can also materialize them.
 
-`transport.maxBytes` sets the response limit.
+`transport.maxBytes` sets the response limit. The host initializes libcurl on the first valid HTTP request and reuses the transport for subsequent requests. Local Lua scripts can run without initializing a network transport.
 `historyMaxBytes` can set a separate history limit.
 Without a configured response limit, the current default is 32 MiB.
 

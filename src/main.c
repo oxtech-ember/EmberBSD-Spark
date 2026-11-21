@@ -238,10 +238,9 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) return 1;
     struct memory memory = {0};
     lua_State *L = lua_newstate(allocate, &memory, luaL_makeseed(NULL));
-    if (!L) { curl_global_cleanup(); return 1; }
+    if (!L) return 1;
     luaL_openlibs(L);
     luaL_requiref(L, "asenta.core", core_module, 0); lua_pop(L, 1);
     luaL_requiref(L, "asenta.http", http_module, 0); lua_pop(L, 1);
@@ -281,8 +280,7 @@ int main(int argc, char **argv) {
         host_log(1, message ? message : "Lua execution failed");
     }
     host_process_close();
-    host_http_close();
     lua_close(L);
-    curl_global_cleanup();
+    host_http_close();
     return failed ? 1 : 0;
 }

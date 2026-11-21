@@ -21,11 +21,18 @@ BLUETOOTH_TARGETS != test "$(ENABLE_BLUETOOTH)" = no || echo "$(BUILD_DIR)/bluet
 BLUETOOTH_CPPFLAGS != test "$(ENABLE_BLUETOOTH)" != no || echo -DSPARK_NO_BLUETOOTH
 SOURCES = src/main.c src/service.c src/http.c src/fs.c src/process.c src/equipment.c $(BLUETOOTH_SOURCES)
 
+AGENT_CFLAGS = $(CPPFLAGS) $(BLUETOOTH_CPPFLAGS) $(CFLAGS) $(LUA_CFLAGS) $(CURL_CFLAGS) $(CRYPTO_CFLAGS)
+AGENT_LIBS = $(LDFLAGS) $(LUA_LIBS) $(CURL_LIBS) $(CRYPTO_LIBS) $(NATIVE_LIBS) $(NATIVE_BLUETOOTH_LIBS) -lpthread -lm
+
 all: $(BUILD_DIR)/agent-lua $(BLUETOOTH_TARGETS)
 
 $(BUILD_DIR)/agent-lua: $(SOURCES) src/host.h
 	mkdir -p $(BUILD_DIR)
-	$(CC) $(CPPFLAGS) $(BLUETOOTH_CPPFLAGS) $(CFLAGS) $(LUA_CFLAGS) $(CURL_CFLAGS) $(CRYPTO_CFLAGS) $(SOURCES) $(LDFLAGS) $(LUA_LIBS) $(CURL_LIBS) $(CRYPTO_LIBS) $(NATIVE_LIBS) $(NATIVE_BLUETOOTH_LIBS) -lpthread -lm -o $@
+	$(CC) $(AGENT_CFLAGS) $(SOURCES) $(AGENT_LIBS) -o $@
+
+$(BUILD_DIR)/http-lifecycle-test: $(SOURCES) src/host.h tests/http-lifecycle.c
+	mkdir -p $(BUILD_DIR)
+	$(CC) $(AGENT_CFLAGS) -Dcurl_global_init=test_curl_init -Dcurl_global_cleanup=test_curl_cleanup $(SOURCES) tests/http-lifecycle.c $(AGENT_LIBS) -o $@
 
 $(BUILD_DIR)/bluetooth-admin: src/bluetooth-admin.c
 	mkdir -p $(BUILD_DIR)
@@ -43,8 +50,9 @@ $(BUILD_DIR)/bluetooth-admin-test: src/bluetooth-admin.c
 package:
 	./build.sh
 
-test: all $(BUILD_DIR)/bluetooth-native-test $(BUILD_DIR)/bluetooth-admin-test
+test: all $(BUILD_DIR)/http-lifecycle-test $(BUILD_DIR)/bluetooth-native-test $(BUILD_DIR)/bluetooth-admin-test
+	sh tests/http-lifecycle.sh $(BUILD_DIR)/http-lifecycle-test
 	cd tests && $(GO) test -count=1 -v .
 
 clean:
-	rm -f $(BUILD_DIR)/agent-lua $(BUILD_DIR)/bluetooth-admin $(BUILD_DIR)/bluetooth-native-test $(BUILD_DIR)/bluetooth-admin-test
+	rm -f $(BUILD_DIR)/agent-lua $(BUILD_DIR)/http-lifecycle-test $(BUILD_DIR)/bluetooth-admin $(BUILD_DIR)/bluetooth-native-test $(BUILD_DIR)/bluetooth-admin-test
